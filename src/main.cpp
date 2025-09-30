@@ -1,4 +1,5 @@
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <iostream>
@@ -56,6 +57,9 @@ int main()
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;        // Enable Docking
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;      // Enable Multi-Viewport / Platform Windows
+
+    // Enable INI file for saving window positions and docking layout
+    io.IniFilename = "imgui.ini";
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -118,10 +122,31 @@ int main()
 
         // DockSpace
         ImGuiIO& io = ImGui::GetIO();
+        static ImGuiID dockspace_id = 0;
         if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
         {
-            ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+            dockspace_id = ImGui::GetID("MyDockSpace");
             ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+
+            // Setup initial docking layout (only on first run)
+            static bool first_time = true;
+            if (first_time)
+            {
+                first_time = false;
+
+                // Clear any existing layout
+                ImGui::DockBuilderRemoveNode(dockspace_id);
+                ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+                ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
+
+                // Split the dockspace to create a right dock
+                ImGuiID dock_main_id = dockspace_id;
+                ImGuiID dock_right_id = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right, 0.3f, nullptr, &dock_main_id);
+
+                // Dock the right panel to the right side
+                ImGui::DockBuilderDockWindow("Right Panel", dock_right_id);
+                ImGui::DockBuilderFinish(dockspace_id);
+            }
         }
 
         if (ImGui::BeginMenuBar())
@@ -149,21 +174,16 @@ int main()
         ImGui::End();
 
         // Right panel window
-        static bool first_run = true;
         if (show_right_panel)
         {
-            // Set initial position and size for the right panel (only on first run)
-            if (first_run)
-            {
-                first_run = false;
-                ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.7f, 30), ImGuiCond_FirstUseEver);
-                ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x * 0.3f, io.DisplaySize.y - 30), ImGuiCond_FirstUseEver);
-            }
-
             ImGui::Begin("Right Panel", &show_right_panel);
             ImGui::Text("This is a collapsible dockable right panel");
             ImGui::Text("You can close this panel with the X button");
             ImGui::Text("or dock it anywhere you like!");
+            ImGui::Separator();
+            ImGui::Text("Drag the title bar to dock this window");
+            ImGui::Text("to different areas of the interface!");
+            ImGui::Text("This panel should auto-dock on startup!");
             ImGui::End();
         }
 
