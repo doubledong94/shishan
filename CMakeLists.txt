@@ -50,7 +50,7 @@ include(FetchContent)
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG v1.89.9  # Specific version for reproducibility
+    GIT_TAG v1.92.3-docking
     SOURCE_DIR "${DEPS_DIR}/imgui-src"
     BINARY_DIR "${DEPS_DIR}/imgui-build"
 )
