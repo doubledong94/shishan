@@ -21,3 +21,4 @@ CMakeUserPresets.json
 .claude
 third_party
 build
+deps/
