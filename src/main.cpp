@@ -3,6 +3,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include <iostream>
+#include <fstream>
 #include <GLFW/glfw3.h>
 
 #if defined(__APPLE__)
@@ -85,7 +86,7 @@ int main()
         static bool dockspaceOpen = true;
         static bool opt_fullscreen_persistant = true;
         bool opt_fullscreen = opt_fullscreen_persistant;
-        static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
+        static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingInCentralNode;
         static bool show_right_panel = true;
 
         // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
@@ -128,24 +129,33 @@ int main()
             dockspace_id = ImGui::GetID("MyDockSpace");
             ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 
-            // Setup initial docking layout (only on first run)
-            static bool first_time = true;
-            if (first_time)
+            // Setup initial docking layout (only if no existing layout is found)
+            static bool layout_initialized = false;
+            if (!layout_initialized)
             {
-                first_time = false;
+                layout_initialized = true;
 
-                // Clear any existing layout
-                ImGui::DockBuilderRemoveNode(dockspace_id);
-                ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
-                ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
+                // Check if imgui.ini exists to determine if this is the first run
+                std::ifstream ini_file("imgui.ini");
+                bool is_first_run = !ini_file.good();
+                ini_file.close();
 
-                // Split the dockspace to create a right dock
-                ImGuiID dock_main_id = dockspace_id;
-                ImGuiID dock_right_id = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right, 0.3f, nullptr, &dock_main_id);
+                if (is_first_run)
+                {
+                    // Clear any existing layout
+                    ImGui::DockBuilderRemoveNode(dockspace_id);
+                    ImGui::DockBuilderAddNode(dockspace_id, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+                    ImGui::DockBuilderSetNodeSize(dockspace_id, ImGui::GetMainViewport()->Size);
 
-                // Dock the right panel to the right side
-                ImGui::DockBuilderDockWindow("Right Panel", dock_right_id);
-                ImGui::DockBuilderFinish(dockspace_id);
+                    // Split the dockspace to create a right dock
+                    ImGuiID dock_main_id = dockspace_id;
+                    ImGuiID dock_right_id = ImGui::DockBuilderSplitNode(dock_main_id, ImGuiDir_Right, 0.3f, nullptr, &dock_main_id);
+
+                    // Dock the right panel to the right side
+                    ImGui::DockBuilderDockWindow("Right Panel", dock_right_id);
+                    ImGui::DockBuilderFinish(dockspace_id);
+                }
+                // If imgui.ini exists, let ImGui load the saved layout automatically
             }
         }
 
@@ -154,18 +164,6 @@ int main()
             if (ImGui::BeginMenu("View"))
             {
                 ImGui::MenuItem("Right Panel", NULL, &show_right_panel);
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("Options"))
-            {
-                if (ImGui::MenuItem("Flag: NoSplit",                "", (dockspace_flags & ImGuiDockNodeFlags_NoSplit) != 0))                 { dockspace_flags ^= ImGuiDockNodeFlags_NoSplit; }
-                if (ImGui::MenuItem("Flag: NoResize",               "", (dockspace_flags & ImGuiDockNodeFlags_NoResize) != 0))                { dockspace_flags ^= ImGuiDockNodeFlags_NoResize; }
-                if (ImGui::MenuItem("Flag: NoDockingInCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingInCentralNode) != 0))  { dockspace_flags ^= ImGuiDockNodeFlags_NoDockingInCentralNode; }
-                if (ImGui::MenuItem("Flag: AutoHideTabBar",         "", (dockspace_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))          { dockspace_flags ^= ImGuiDockNodeFlags_AutoHideTabBar; }
-                if (ImGui::MenuItem("Flag: PassthruCentralNode",    "", (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0))     { dockspace_flags ^= ImGuiDockNodeFlags_PassthruCentralNode; }
-                ImGui::Separator();
-                if (ImGui::MenuItem("Close DockSpace", NULL, false, dockspaceOpen))
-                    dockspaceOpen = false;
                 ImGui::EndMenu();
             }
             ImGui::EndMenuBar();
