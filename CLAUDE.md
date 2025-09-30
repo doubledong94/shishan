@@ -1,0 +1,2 @@
+- 此项目名字叫shishan
+- 生成的代码要在mac，linux，windows上都能编译
